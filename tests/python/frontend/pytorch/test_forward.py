@@ -20,6 +20,7 @@ from time import time
 import sys
 from scipy.stats import t as tdistr
 import numpy as np
+import os
 import torch
 from torch.nn import Module
 import tvm
@@ -3002,6 +3003,25 @@ def test_forward_pretrained_bert_base_uncased():
     # Print the outputs
     print('Torch top-1 id: {}, token: {}'.format(torch_pred_idx, torch_pred_token))
     print('TVM   top-1 id: {}, token: {}'.format(tvm_pred_idx, tvm_pred_token))
+
+
+def test_convert_torch_script_file():
+    def model_fn(x):
+        x = (x - 1).long()
+        y = y.to(dtype=torch.float32)
+        y = y[:, 0]
+        return y
+    
+    ishape = (4, 5)
+    inp = torch.ones(ishape, dtype=torch.int64)
+    script_module = torch.jit.trace(model_fn, inp)
+
+    fname = "tmp.pt"
+    torch.jit.save(script_module, fname)
+    loaded = torch.jit.load(fname)
+    os.remove(fname)
+
+    verify_model(loaded.eval(), input_data=inp)
 
 
 if __name__ == "__main__":
